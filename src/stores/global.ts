@@ -1,10 +1,13 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
+import type { Theme, User } from "@/types";
 
 interface AppState {
-    theme: 'light' | 'dark',
+    theme: Theme,
     sidebarVisible: boolean,
 
-    setTheme: (theme: 'light' | 'dark') => void,
+    user: User,
+
+    setTheme: (theme: Theme) => void,
     setSidebarState: (state: boolean) => void,
 }
 
@@ -21,7 +24,7 @@ export const useAppState = defineStore('app-state', {
             this.sidebarVisible = state;
         },
 
-        setTheme(theme: 'light' | 'dark') {
+        setTheme(theme: Theme) {
             this.theme = theme;
 
             const html = document.documentElement;
