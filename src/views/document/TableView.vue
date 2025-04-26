@@ -48,23 +48,23 @@
 <script>
 import { defineComponent, ref, computed, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import { useDocumentsStore } from '@/stores/documents.js';
-import { usePdfMarkersStore } from '@/stores/pdfMarkers.js';
+import { useMarkers } from "@/composables/userMarkers.js";
+import { useDocuments } from "@/composables/useDocuments.js";
 
 export default defineComponent({
   name: 'DocumentsListView',
 
   setup() {
     const router = useRouter();
-    const documentsStore = useDocumentsStore();
-    const markersStore = usePdfMarkersStore();
+    const documentsApi = useDocuments();
+    const markersApi = useMarkers();
 
     const loading = ref(true);
-    const documents = computed(() => documentsStore.documents);
+    const documents = documentsApi.documents;
 
     // Get unresolved count for a document
     const getUnresolvedCount = (documentId) => {
-      return markersStore.getUnresolvedMarkers(documentId).length;
+      return markersApi.getUnresolvedMarkers(documentId).length;
     };
 
     // Navigate to document viewer
@@ -91,12 +91,12 @@ export default defineComponent({
     // Load documents on component creation
     onMounted(async () => {
       try {
-        await documentsStore.fetchDocuments();
+        await documentsApi.fetchDocuments();
 
         // After loading documents, fetch markers for all documents
         // In a real app, you might want to optimize this for large collections
         await Promise.all(
-            documents.value.map(doc => markersStore.fetchMarkers(doc.id))
+            documents.value.map(doc => markersApi.fetchMarkers(doc.id))
         );
       } catch (error) {
         console.error('Error loading documents:', error);

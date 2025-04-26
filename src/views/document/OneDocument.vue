@@ -1,45 +1,43 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue';
-import { useDocumentsStore } from '@/stores/documents.js';
-import { usePdfMarkersStore } from '@/stores/pdfMarkers.js';
 import PDFMarkerViewer from '@/components/PDFMarkerViewer.vue';
+import { useDocuments } from "@/composables/useDocuments.js";
+import { useMarkers } from "@/composables/userMarkers.js";
 
 const props = defineProps({
   documentId: {
-    type: [Number, String],
+    type: String,
     required: true
   }
 });
 
 const baseUrl = window.location.origin;
 
-const documentsStore = useDocumentsStore();
-const pdfMarkersStore = usePdfMarkersStore();
+const documentsApi = useDocuments();
+const markersApi = useMarkers();
 const loading = ref(true);
 
 // Get document and markers data
-const document = computed(() => documentsStore.currentDocument);
+const document = documentsApi.currentDocument;
 
 const allMarkers = computed(() =>
-    pdfMarkersStore.getMarkersByDocumentId(props.documentId)
+    markersApi.getMarkersByDocumentId(props.documentId)
 );
 
 // Calculate counts
 const unresolvedCount = computed(() =>
-    pdfMarkersStore.getUnresolvedMarkers(props.documentId).length
+    markersApi.getUnresolvedMarkers(props.documentId).length
 );
 const resolvedCount = computed(() =>
-    allMarkers.value.filter(marker => marker.resolved).length
+    allMarkers.value.filter(marker => marker.isResolved).length
 );
 
 // Load document and markers on component creation
 onMounted(async () => {
   try {
-    // Load document data
-    await documentsStore.fetchDocument(props.documentId);
 
-    // Load markers for this document
-    await pdfMarkersStore.fetchMarkers(props.documentId);
+    await documentsApi.getDocumentById(props.documentId);
+
   } catch (error) {
     console.error('Error loading document:', error);
   } finally {
@@ -50,7 +48,7 @@ onMounted(async () => {
 // Handler for new markers
 const onMarkerAdded = async (markerData) => {
   try {
-    await pdfMarkersStore.createMarker(markerData);
+    await markersApi.createMarker(markerData);
     // Show success notification using your preferred notification system
   } catch (error) {
     console.error('Failed to add comment:', error);
@@ -61,7 +59,7 @@ const onMarkerAdded = async (markerData) => {
 // Handler for resolving markers
 const onMarkerResolved = async (markerId) => {
   try {
-    await pdfMarkersStore.resolveMarker(markerId);
+    await markersApi.resolveMarker(markerId);
     // Show success notification
   } catch (error) {
     console.error('Failed to resolve comment:', error);

@@ -1,10 +1,12 @@
+import type { User } from "@/types/User.ts";
+
 export interface Marker {
     id: string;
-    documentId: number | string;
+    documentId: string;
     pageNumber: number;
     position: MarkerPosition,
     comment: string;
-    author: string;
+    author: User;
     isResolved: boolean;
     createdAt: string;
 }

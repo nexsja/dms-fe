@@ -1,6 +1,7 @@
 // main.js
 import { createApp, watch } from 'vue';
 import { createPinia } from 'pinia'
+import { VueQueryPlugin } from "vue-query";
 import piniaPluginPersistedstate from 'pinia-plugin-persistedstate'
 
 import VuePdf from 'vue3-pdfjs'
@@ -24,6 +25,7 @@ pinia.use(piniaPluginPersistedstate)
 
 app.use(pinia);
 app.use(appRouter);
+app.use(VueQueryPlugin);
 
 // Use PrimeVue plugins with theme configuration
 app.use(PrimeVue, {

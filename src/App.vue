@@ -34,8 +34,6 @@
 <script setup>
 import { ref, onMounted, watch } from 'vue';
 import { useToast } from 'primevue/usetoast';
-import DashboardView from './components/DashboardView.vue';
-import DocumentReviewView from './components/DocumentReviewView.vue';
 
 // Import PrimeVue components
 import Card from 'primevue/card';

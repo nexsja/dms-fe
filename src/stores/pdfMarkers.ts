@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia';
-import axios from 'axios';
+import { useQuery } from "vue-query";
+import type { Marker } from "@/types";
 
 const API_URL = import.meta.env.VITE_DOCUMENT_STORE_URL;
 
@@ -10,47 +11,7 @@ export const usePdfMarkersStore = defineStore('pdfMarkers', {
         error: null
     }),
 
-    getters: {
-        getMarkersByDocumentId: (state) => {
-            return (documentId) => {
-                return state.markers.filter(marker => marker.documentId === documentId);
-            }
-        },
-
-        getMarkersByPage: (state) => {
-            return (documentId, pageNumber) => {
-                return state.markers.filter(
-                    marker => marker.documentId === documentId && marker.pageNumber === pageNumber
-                );
-            }
-        },
-
-        getUnresolvedMarkers: (state) => {
-            return (documentId) => {
-                return state.markers.filter(
-                    marker => marker.documentId === documentId && !marker.resolved
-                );
-            }
-        }
-    },
-
     actions: {
-        async fetchMarkers(documentId) {
-            this.loading = true;
-
-            try {
-                // Call your API to get markers
-                const response = await axios.get(API_URL + `/api/documents/${documentId}/markers`);
-
-                this.markers = response.data;
-                this.error = null;
-            } catch (error) {
-                console.error('Error fetching markers:', error);
-                this.error = 'Failed to load markers';
-            } finally {
-                this.loading = false;
-            }
-        },
 
         async createMarker(markerData) {
             this.loading = true;
