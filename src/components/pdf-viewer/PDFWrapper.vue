@@ -2,7 +2,7 @@
 import { onMounted, provide, ref } from "vue";
 import Markers from "@/components/pdf-viewer/Markers.vue";
 import { createLoadingTask } from "vue3-pdfjs";
-import { PDFDocumentProxy } from "pdfjs-dist";
+import type { PDFDocumentProxy } from "pdfjs-dist";
 
 interface Props {
   pdfUrl: string;
