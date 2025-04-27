@@ -3,6 +3,7 @@ import { onMounted, provide, ref } from "vue";
 import Markers from "@/components/pdf-viewer/Markers.vue";
 import { createLoadingTask } from "vue3-pdfjs";
 import type { PDFDocumentProxy } from "pdfjs-dist";
+import Controls from "@/components/pdf-viewer/Controls.vue";
 
 interface Props {
   pdfUrl: string;
@@ -14,20 +15,11 @@ const props = defineProps<Props>();
 const currentPage = ref(1);
 const pdfLoaded = ref(false);
 const pageCount = ref(0);
-
 const pdfComponent = ref(null)
 
-const previousPage = () => {
-  if (currentPage.value > 1) {
-    currentPage.value--;
-  }
-};
-
-const nextPage = () => {
-  if (currentPage.value < pageCount.value) {
-    currentPage.value++;
-  }
-};
+const onPageUpdate = (page: number) => {
+  currentPage.value = page;
+}
 
 onMounted(() => {
   const loadingTask = createLoadingTask(props.pdfUrl)
@@ -44,34 +36,31 @@ provide('pdfComponentRef', pdfComponent)
     <!-- PDF Viewer using vue3-pdfjs -->
     <div class="pdf-viewer-wrapper">
 
+      <Controls :current-page="currentPage" :page-count="pageCount" @update:page="onPageUpdate" />
+
       <VuePdf
           ref="pdfComponent"
           :src="pdfUrl"
           :page="currentPage"
           :key="currentPage"
       />
-      <Markers :key="currentPage" :page-number="currentPage" :document-id="documentId">
-      </Markers>
 
-      <!-- Navigation controls -->
-      <div class="pdf-controls" v-if="pdfLoaded">
-        <button
-            @click="previousPage"
-            :disabled="currentPage <= 1">
-          Previous
-        </button>
-        <span>Page {{ currentPage }} of {{ pageCount }}</span>
-        <button
-            @click="nextPage"
-            :disabled="currentPage >= pageCount">
-          Next
-        </button>
-      </div>
+      <Markers :key="currentPage" :page-number="currentPage" :document-id="documentId" />
+      <Controls :current-page="currentPage" :page-count="pageCount" @update:page="onPageUpdate" />
     </div>
   </div>
 </template>
 
 <style scoped>
+.pdf-container {
+  position: relative;
+  width: 100%;
+  height: 800px;
+  border: 1px solid #ccc;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
 .pdf-viewer-wrapper {
   flex: 1;
   position: relative;

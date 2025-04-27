@@ -1,15 +1,14 @@
-<script setup>
+<script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
-import PDFMarkerViewer from '@/components/PDFMarkerViewer.vue';
 import { useDocuments } from "@/composables/useDocuments.js";
 import { useMarkers } from "@/composables/userMarkers.js";
+import PDFWrapper from "@/components/pdf-viewer/PDFWrapper.vue";
 
-const props = defineProps({
-  documentId: {
-    type: String,
-    required: true
-  }
-});
+interface Props {
+  documentId: string;
+}
+
+const props = defineProps<Props>();
 
 const baseUrl = window.location.origin;
 
@@ -89,7 +88,7 @@ const onMarkerResolved = async (markerId) => {
       </div>
 
       <!-- PDF Marker Viewer Component -->
-      <PDFMarkerViewer v-if="!loading"
+      <PDFWrapper v-if="!loading"
           :pdf-url="`${baseUrl}/pdfs/${document.filename}`"
           :document-id="documentId"
           @marker-added="onMarkerAdded"
