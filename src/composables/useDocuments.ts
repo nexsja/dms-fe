@@ -36,7 +36,7 @@ export function useDocuments(elementRef: Ref<HTMLElement | null>) {
     }
 
     async function getDocumentById(documentId: string) {
-        const response = await useQuery<Document>({
+        const response = await queryClient.fetchQuery<Document>({
             queryKey: [`documents-${documentId}`],
             queryFn: async () => {
                 const response = await fetch(API_URL + `/api/documents/${documentId}`);
