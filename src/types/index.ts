@@ -1,4 +1,4 @@
-export * from './Marker';
+export * from './Comment.ts';
 export * from './User';
 export * from './Document';
 

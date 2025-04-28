@@ -1,6 +1,6 @@
 import { defineStore } from 'pinia';
 import { useQuery } from "vue-query";
-import type { Marker } from "@/types";
+import type { Comment } from "@/types";
 
 const API_URL = import.meta.env.VITE_DOCUMENT_STORE_URL;
 

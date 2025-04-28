@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue';
 import { useDocuments } from "@/composables/useDocuments.js";
-import { useMarkers } from "@/composables/userMarkers.js";
+import { useComments } from "@/composables/useComments.ts";
 import PDFWrapper from "@/components/pdf-viewer/PDFWrapper.vue";
 
 interface Props {
@@ -13,19 +13,19 @@ const props = defineProps<Props>();
 const baseUrl = window.location.origin;
 
 const documentsApi = useDocuments();
-const markersApi = useMarkers();
+const markersApi = useComments();
 const loading = ref(true);
 
 // Get document and markers data
 const document = documentsApi.currentDocument;
 
 const allMarkers = computed(() =>
-    markersApi.getMarkersByDocumentId(props.documentId)
+    markersApi.getCommentsByDocumentId(props.documentId)
 );
 
 // Calculate counts
 const unresolvedCount = computed(() =>
-    markersApi.getUnresolvedMarkers(props.documentId).length
+    markersApi.getUnresolvedComments(props.documentId).length
 );
 const resolvedCount = computed(() =>
     allMarkers.value.filter(marker => marker.isResolved).length
@@ -45,9 +45,9 @@ onMounted(async () => {
 });
 
 // Handler for new markers
-const onMarkerAdded = async (markerData) => {
+const onMarkerAdded = async (commentData) => {
   try {
-    await markersApi.createMarker(markerData);
+    markersApi.addComment(props.documentId, 1, {x: 10, y: 20}, commentData);
     // Show success notification using your preferred notification system
   } catch (error) {
     console.error('Failed to add comment:', error);

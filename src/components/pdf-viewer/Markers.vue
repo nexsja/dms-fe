@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, onBeforeUnmount, inject } from 'vue';
-import type { Marker, MarkerPosition } from "@/types";
-import { useMarkers } from "@/composables/userMarkers.ts";
+import type { Comment, MarkerPosition } from "@/types";
+import { useComments } from "@/composables/useComments.ts";
 
 interface Props {
   pageNumber: number;
@@ -12,18 +12,18 @@ const props = defineProps<Props>()
 
 const pdfComponent = inject('pdfComponentRef')
 
-const { markers, activeMarker, addMarker, fetchMarkers } = useMarkers(pdfComponent);
+const { comments, activeMarker, addComment, fetchComments } = useComments(pdfComponent);
 
 const emit = defineEmits(['marker-resolved', 'marker-created']);
 
-const selectedMarker = ref<Marker | null>(null);
+const selectedMarker = ref<Comment | null>(null);
 const placingMarker = ref(false);
 const newMarkerPosition = ref<MarkerPosition | null>(null);
 const newMarkerComment = ref('');
 const markersOverlay = ref(null);
 
 const visibleMarkers = computed(() => {
-  return markers.value.filter((marker: Marker) => marker.pageNumber === props.pageNumber);
+  return comments.value.filter((comment: Comment) => comment.marker?.pageNumber === props.pageNumber);
 });
 
 const enableMarkerPlacement = () => {
@@ -46,7 +46,7 @@ const saveNewMarker = async () => {
     return;
   }
 
-  const newMarker = addMarker(props.documentId, props.pageNumber, newMarkerPosition.value, newMarkerComment.value);
+  const newMarker = addComment(props.documentId, props.pageNumber, newMarkerPosition.value, newMarkerComment.value);
 
   try {
     emit('marker-created', newMarker);
@@ -57,7 +57,7 @@ const saveNewMarker = async () => {
   }
 };
 
-const resolveMarker = async (marker: Marker) => {
+const resolveMarker = async (marker: Comment) => {
   try {
     // In a real app, you would update this via API/store
     // Example: await pdfMarkersStore.resolveMarker(marker.id);
@@ -75,7 +75,13 @@ const resolveMarker = async (marker: Marker) => {
   }
 };
 
-const getMarkerStyle = (marker: Marker) => {
+const getMarkerStyle = (comment: Comment) => {
+  const marker = comment.marker;
+
+  if (!marker) {
+    return;
+  }
+
   if (marker.pageNumber !== props.pageNumber) {
     return { display: 'none' };
   }
@@ -83,11 +89,11 @@ const getMarkerStyle = (marker: Marker) => {
   return {
     left: `${marker.position.x}px`,
     top: `${marker.position.y}px`,
-    opacity: marker.isResolved ? '0.5' : '1'
+    opacity: comment.isResolved ? '0.5' : '1'
   };
 };
 
-const showMarkerDetails = (marker: Marker) => {
+const showMarkerDetails = (marker: Comment) => {
   selectedMarker.value = marker;
 };
 
@@ -116,7 +122,7 @@ const handleDocumentClick = (event) => {
     const x = event.clientX - pdfRect.left;
     const y = event.clientY - pdfRect.top;
 
-    newMarkerPosition.value = { x, y, pageNumber: currentPage.value };
+    newMarkerPosition.value = { x, y };
 
     // Stop event propagation
     event.stopPropagation();
@@ -138,7 +144,7 @@ onBeforeUnmount(() => {
 });
 
 onMounted(async() => {
-  await fetchMarkers(props.documentId);
+  await fetchComments(props.documentId);
 });
 </script>
 
