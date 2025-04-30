@@ -1,9 +1,10 @@
 <script setup lang="ts">
-import { onMounted, provide, ref } from "vue";
+import { onMounted, provide, ref, watch } from "vue";
 import Markers from "@/components/pdf-viewer/Markers.vue";
 import { createLoadingTask } from "vue3-pdfjs";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import Controls from "@/components/pdf-viewer/Controls.vue";
+import { useAppState } from "@/stores/global.ts";
 
 interface Props {
   pdfUrl: string;
@@ -12,13 +13,22 @@ interface Props {
 
 const props = defineProps<Props>();
 
+const appState = useAppState();
 const currentPage = ref(1);
 const pdfLoaded = ref(false);
 const pageCount = ref(0);
 const pdfComponent = ref(null)
+const markerEnabled = ref(appState.documentMarker);
+
+provide('pdfComponentRef', pdfComponent)
 
 const onPageUpdate = (page: number) => {
   currentPage.value = page;
+}
+
+const onToggleMarker = (mode: boolean) => {
+  markerEnabled.value = mode;
+  pdfComponent.value.$el.classList.toggle("marker-active");
 }
 
 onMounted(() => {
@@ -27,31 +37,60 @@ onMounted(() => {
     pageCount.value = pdf.numPages
     pdfLoaded.value = true;
   })
+
 });
-provide('pdfComponentRef', pdfComponent)
+
+appState.$subscribe((mutations, state) => {
+  markerEnabled.value = state.documentMarker;
+  if (markerEnabled.value) {
+    pdfComponent.value.$el.classList.add("marker-active");
+  } else {
+    pdfComponent.value.$el.classList.remove("marker-active");
+  }
+})
 </script>
 
 <template>
   <div class="pdf-container">
-    <!-- PDF Viewer using vue3-pdfjs -->
     <div class="pdf-viewer-wrapper">
 
-      <Controls :current-page="currentPage" :page-count="pageCount" @update:page="onPageUpdate" />
+      <Controls
+          :current-page="currentPage"
+          :page-count="pageCount"
+          @toggle-marker="onToggleMarker"
+          @update:page="onPageUpdate"
+      />
 
       <VuePdf
           ref="pdfComponent"
           :src="pdfUrl"
           :page="currentPage"
           :key="currentPage"
+          class="pdf-file"
       />
 
-      <Markers :key="currentPage" :page-number="currentPage" :document-id="documentId" />
-      <Controls :current-page="currentPage" :page-count="pageCount" @update:page="onPageUpdate" />
+      <Markers
+          :key="currentPage"
+          :page-number="currentPage"
+          :document-id="documentId"
+      />
+
+      <Controls
+          :current-page="currentPage"
+          :page-count="pageCount"
+          @toggle-marker="onToggleMarker"
+          @update:page="onPageUpdate"
+      />
     </div>
   </div>
 </template>
 
 <style scoped>
+.pdf-file {
+  &.marker-active {
+    cursor: crosshair;
+  }
+}
 .pdf-container {
   position: relative;
   width: 100%;

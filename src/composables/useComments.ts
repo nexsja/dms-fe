@@ -4,13 +4,16 @@ import type { Comment, Marker, MarkerPosition } from "@/types";
 import { uuid } from "vue-uuid";
 import { useAppState } from "@/stores/global.ts";
 import { useQuery, useQueryClient } from "vue-query";
-import Markers from "@/components/pdf-viewer/Markers.vue";
 
 const API_URL = import.meta.env.VITE_DOCUMENT_STORE_URL;
 
 interface CommentResponse {
     data: Comment[];
     status: string;
+}
+
+interface CommentRequest {
+
 }
 
 export function useComments(elementRef: Ref<HTMLElement | null>) {
@@ -45,6 +48,7 @@ export function useComments(elementRef: Ref<HTMLElement | null>) {
         position: MarkerPosition,
         comment: string = ''
     ): string {
+
         const Marker: Marker = {
             id: uuid.v4(),
             pageNumber: pageNumber,
@@ -59,7 +63,8 @@ export function useComments(elementRef: Ref<HTMLElement | null>) {
             createdAt: new Date().toDateString(),
             isResolved: false
         };
-        // markers.value.push(newMarker)
+
+        comments.value.push(newComment)
         return newComment.id
     }
 

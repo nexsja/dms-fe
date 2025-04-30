@@ -1,27 +1,38 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import type { Theme, User } from "@/types";
+import { useUsersApi } from "@/composables/useUsersApi.ts";
 
 interface AppState {
     theme: Theme,
     sidebarVisible: boolean,
+    documentMarker: boolean,
 
     user: User,
 
     setTheme: (theme: Theme) => void,
     setSidebarState: (state: boolean) => void,
+    toggleDocumentMarker: (state: boolean) => void,
 }
 
 export const useAppState = defineStore('app-state', {
     state: (): AppState => {
+        const userApi = useUsersApi();
+
         return {
+            user: userApi.getCurrentUser(),
             theme: 'light',
-            sidebarVisible: true
+            sidebarVisible: true,
+            documentMarker: false,
         }
     },
 
     actions: {
         setSidebarState(state: boolean) {
             this.sidebarVisible = state;
+        },
+
+        toggleDocumentMarker(state: boolean) {
+            this.documentMarker = state;
         },
 
         setTheme(theme: Theme) {

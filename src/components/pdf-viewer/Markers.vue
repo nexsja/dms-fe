@@ -1,7 +1,9 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onBeforeUnmount, inject } from 'vue';
+import { ref, computed, onMounted, onBeforeUnmount, inject, type Ref, watch, useTemplateRef, nextTick } from 'vue';
 import type { Comment, MarkerPosition } from "@/types";
 import { useComments } from "@/composables/useComments.ts";
+import { useAppState } from "@/stores/global.ts";
+import { FloatLabel, InputText, Button } from "primevue";
 
 interface Props {
   pageNumber: number;
@@ -10,17 +12,24 @@ interface Props {
 
 const props = defineProps<Props>()
 
-const pdfComponent = inject('pdfComponentRef')
+const pdfComponent = inject<Ref<HTMLElement>>('pdfComponentRef')!!
 
 const { comments, activeMarker, addComment, fetchComments } = useComments(pdfComponent);
 
 const emit = defineEmits(['marker-resolved', 'marker-created']);
 
+const appState =  useAppState();
 const selectedMarker = ref<Comment | null>(null);
 const placingMarker = ref(false);
+const newMarkerModal = ref(false);
 const newMarkerPosition = ref<MarkerPosition | null>(null);
 const newMarkerComment = ref('');
 const markersOverlay = ref(null);
+const modalPosition = ref({ top: '0px', left: '0px' });
+
+// Necessary for offset calculation
+const controlsHeight = 58;
+const markerHeight = 30;
 
 const visibleMarkers = computed(() => {
   return comments.value.filter((comment: Comment) => comment.marker?.pageNumber === props.pageNumber);
@@ -36,6 +45,7 @@ const cancelMarkerPlacement = () => {
   placingMarker.value = false;
   newMarkerPosition.value = null;
   newMarkerComment.value = '';
+  newMarkerModal.value = false;
   // Reset cursor
   document.body.style.cursor = 'default';
 };
@@ -78,6 +88,9 @@ const resolveMarker = async (marker: Comment) => {
 const getMarkerStyle = (comment: Comment) => {
   const marker = comment.marker;
 
+  const pdfElement = pdfComponent.value?.$el;
+  if (!pdfElement) return;
+
   if (!marker) {
     return;
   }
@@ -86,24 +99,83 @@ const getMarkerStyle = (comment: Comment) => {
     return { display: 'none' };
   }
 
+  const { x, y } = marker.position
+
+  // Place the marker relative to the pdf document itself, seemingly ignoring the control component height
+  // and offset the height by the height of the marker itself so it looks like the chat bubble points to
+  // where the marker was placed, rather than below it
   return {
-    left: `${marker.position.x}px`,
-    top: `${marker.position.y}px`,
+    left: `${x}px`,
+    top: `${ y + controlsHeight - markerHeight}px`,
     opacity: comment.isResolved ? '0.5' : '1'
   };
 };
 
-const showMarkerDetails = (marker: Comment) => {
-  selectedMarker.value = marker;
+const showMarkerDetails = (comment: Comment) => {
+
+  // Close the marker by clicking the same marker twice
+  if (selectedMarker.value == comment) {
+    selectedMarker.value = null;
+    return;
+  }
+
+  selectedMarker.value = comment;
+
+  // Close any new marker modal that might be open
+  newMarkerModal.value = false;
+
+  // Position the modal near the marker
+  if (comment.marker) {
+
+    calculateModalPosition(comment.marker.position.x, comment.marker.position.y);
+  }
 };
 
 const formatDate = (date: string) => {
   return new Date(date).toLocaleDateString();
 };
 
+const calculateModalPosition = (x: number, y: number) => {
+  if (!pdfComponent.value?.$el) return;
+
+  const pdfRect = pdfComponent.value.$el.getBoundingClientRect();
+  const modalWidth = 390; // Max modal width from CSS
+  const modalHeight = 65; // Approximate modal height
+
+  // Calculate if modal would go out of bounds
+  let left = x;
+  let top = y;
+
+  // Check right boundary
+  if (left + modalWidth > pdfRect.width) {
+    left = x - modalWidth;
+  }
+
+  // If left would be negative, anchor to left edge
+  if (left < 0) {
+    left = 0;
+  }
+
+  // Check bottom boundary
+  if (top < modalHeight) {
+    top = 0;
+  }
+
+  const offsetX = pdfRect.left;
+  const offsetY = pdfRect.top;
+
+  modalPosition.value = {
+    left: `${offsetX+left}px`,
+    top: `${offsetY+top}px`
+  };
+};
+
 const handleDocumentClick = (event) => {
+  // Close any open modals first
+  selectedMarker.value = null;
+
   // Only process clicks if in marker placement mode
-  if (!placingMarker.value) return;
+  if (!appState.documentMarker) return;
 
   // Check if the click was inside the PDF viewer
   const pdfElement = pdfComponent.value?.$el;
@@ -119,32 +191,73 @@ const handleDocumentClick = (event) => {
       event.clientY <= pdfRect.bottom
   ) {
     // Calculate coordinates relative to the PDF container
-    const x = event.clientX - pdfRect.left;
-    const y = event.clientY - pdfRect.top;
+    const x = Math.round(event.clientX - pdfRect.left);
+    const y = Math.round(event.clientY - pdfRect.top);
 
     newMarkerPosition.value = { x, y };
+    calculateModalPosition(x, y);
+
+    newMarkerModal.value = true;
+
+    nextTick(() => {
+      document.getElementById('add-comment')?.focus()
+    })
 
     // Stop event propagation
     event.stopPropagation();
+    // appState.toggleDocumentMarker(false);
+  }
+};
+
+// Close modals when clicking outside
+const handleGlobalClick = (event) => {
+  // Skip if click is on a marker or modal
+  if (event.target.closest('.comment-marker') ||
+      event.target.closest('.modal-content')) {
+    return;
+  }
+
+  // Close modals
+  selectedMarker.value = null;
+  if (!appState.documentMarker) {
+    newMarkerModal.value = false;
   }
 };
 
 // Lifecycle hooks
 onMounted(() => {
-  // Add click listener for marker placement
-  document.addEventListener('click', handleDocumentClick);
+  pdfComponent.value.$el.addEventListener('click', handleDocumentClick);
+  document.addEventListener('click', handleGlobalClick);
 });
 
 onBeforeUnmount(() => {
-  // Clean up event listener
-  document.removeEventListener('click', handleDocumentClick);
+  // Clean up event listeners
+  pdfComponent.value?.$el.removeEventListener('click', handleDocumentClick);
+  document.removeEventListener('click', handleGlobalClick);
 
   // Reset cursor just in case
   document.body.style.cursor = 'default';
 });
 
+const onEscapePressed = (event: KeyboardEvent) => {
+
+  if (event.key != 'Escape') {
+    return;
+  }
+
+  if (newMarkerModal.value) {
+    newMarkerModal.value = false;
+  }
+
+  if (selectedMarker.value) {
+    selectedMarker.value = null;
+  }
+};
+
 onMounted(async() => {
   await fetchComments(props.documentId);
+
+  document.addEventListener('keydown', onEscapePressed)
 });
 </script>
 
@@ -167,35 +280,33 @@ onMounted(async() => {
   </button>
 
   <!-- Marker details modal -->
-  <div v-if="selectedMarker" class="marker-modal">
-    <div class="modal-content">
+  <div v-if="selectedMarker" class="marker-modal marker-modal-positioned">
+    <div class="modal-content" :style="modalPosition">
       <h3>Comment</h3>
       <p>{{ selectedMarker.comment }}</p>
       <p><small>By: {{ selectedMarker.author.name }} on {{ formatDate(selectedMarker.createdAt) }}</small></p>
       <div class="modal-actions">
-        <button @click="resolveMarker(selectedMarker)" v-if="!selectedMarker.isResolved">
-          Resolve
-        </button>
-        <button @click="selectedMarker = null">Close</button>
+        <Button @click="resolveMarker(selectedMarker)" v-if="!selectedMarker.isResolved" label="Resolve" />
+        <Button @click="selectedMarker = null" label="Close" />
       </div>
     </div>
   </div>
 
-  <!-- New marker form modal -->
-  <div v-if="placingMarker" class="marker-modal">
-    <div class="modal-content">
-      <h3>Add Comment</h3>
-      <textarea v-model="newMarkerComment" placeholder="Enter your comment"></textarea>
+  <div v-if="newMarkerModal" class="marker-modal marker-modal-positioned">
+    <div class="modal-content" :style="modalPosition">
+      <FloatLabel variant="on">
+        <label for="add-comment">Add comment</label>
+        <InputText ref="commentInput" id="add-comment" v-model="newMarkerComment" />
+      </FloatLabel>
       <div class="modal-actions">
-        <button @click="saveNewMarker">Save</button>
-        <button @click="cancelMarkerPlacement">Cancel</button>
+        <Button icon="pi pi-check" severity="success" @click="saveNewMarker" />
+        <Button icon="pi pi-times" severity="danger" @click="cancelMarkerPlacement" />
       </div>
     </div>
   </div>
 </template>
 
 <style scoped>
-
 .comment-marker {
   position: absolute;
   width: 30px;
@@ -231,16 +342,6 @@ onMounted(async() => {
   cursor: pointer;
   z-index: 20;
 }
-.markers-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  pointer-events: none;
-  width: 100%;
-  height: 100%;
-  z-index: 10;
-}
-
 
 .marker-modal {
   position: fixed;
@@ -248,44 +349,35 @@ onMounted(async() => {
   left: 0;
   width: 100%;
   height: 100%;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  align-items: center;
-  justify-content: center;
   z-index: 100;
+}
+
+.marker-modal-positioned {
+  background-color: transparent;
+  pointer-events: none;
 }
 
 .modal-content {
   background-color: white;
-  padding: 20px;
+  padding: 16px;
+  display: flex;
   border-radius: 4px;
-  width: 400px;
+  width: 390px;
   max-width: 90%;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  position: absolute;
+  pointer-events: auto;
 }
 
 .modal-actions {
-  margin-top: 15px;
+  margin-left: 8px;
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: center;
   gap: 10px;
-}
-button {
-  padding: 8px 15px;
-  background-color: #3498db;
-  color: white;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
 }
 
 button:hover {
   background-color: #2980b9;
-}
-
-textarea {
-  width: 100%;
-  height: 100px;
-  margin-bottom: 10px;
-  padding: 8px;
 }
 </style>
