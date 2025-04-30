@@ -56,7 +56,16 @@ const saveNewMarker = async () => {
     return;
   }
 
-  const newMarker = addComment(props.documentId, props.pageNumber, newMarkerPosition.value, newMarkerComment.value);
+  let authorId = appState.user.id;
+  const newMarker = addComment(
+      props.documentId,
+      newMarkerComment.value,
+      authorId,
+      {
+        pageNumber: props.pageNumber,
+        position: newMarkerPosition.value
+      }
+    );
 
   try {
     emit('marker-created', newMarker);

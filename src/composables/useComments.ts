@@ -1,20 +1,15 @@
-import { ref, onMounted, onUnmounted } from 'vue'
+import { ref } from 'vue'
 import type { Ref } from 'vue'
-import type { Comment, Marker, MarkerPosition } from "@/types";
-import { uuid } from "vue-uuid";
+import type { Comment } from "@/types";
 import { useAppState } from "@/stores/global.ts";
-import { useQuery, useQueryClient } from "vue-query";
+import { useMutation, useQuery, useQueryClient } from "vue-query";
+import { CommentMapper } from  "@/mappers";
+import type { CommentRequest } from "@/types/requests";
+import type { ApiResponse } from "@/types/response";
 
 const API_URL = import.meta.env.VITE_DOCUMENT_STORE_URL;
 
-interface CommentResponse {
-    data: Comment[];
-    status: string;
-}
 
-interface CommentRequest {
-
-}
 
 export function useComments(elementRef: Ref<HTMLElement | null>) {
 
@@ -42,30 +37,43 @@ export function useComments(elementRef: Ref<HTMLElement | null>) {
 
     const appState = useAppState();
 
+    const createCommentMutation = useMutation({
+        mutationFn: async (commentRequest: CommentRequest): Promise<Comment> => {
+            const response = await fetch(`${API_URL}/api/documents/${commentRequest.documentId}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(commentRequest)
+            });
+
+            if (!response.ok) {
+                throw new Error(`[${response.status}] Error creating comment: ${response.statusText}`);
+            }
+
+            const responseData: ApiResponse<Comment> = await response.json();
+            return CommentMapper.fromResponse(responseData);
+        },
+        onSuccess: (data, variables) => {
+            comments.value.push(data)
+        }
+    });
+
     function addComment(
         documentId: string,
-        pageNumber: number,
-        position: MarkerPosition,
-        comment: string = ''
+        comment: string,
+        authorId: string,
+        marker: { pageNumber: number, position: { x: number, y: number } } | null
     ): string {
 
-        const Marker: Marker = {
-            id: uuid.v4(),
-            pageNumber: pageNumber,
-            position: position
-        }
-        const newComment: Comment = {
-            id: uuid.v4(),
-            documentId: documentId,
-            marker: Marker,
-            comment: comment,
-            author: appState.user,
-            createdAt: new Date().toDateString(),
-            isResolved: false
-        };
+        const request = CommentMapper.toRequest(
+            documentId,
+            comment,
+            authorId,
+            marker
+        );
 
-        comments.value.push(newComment)
-        return newComment.id
+        return createCommentMutation.mutateAsync(request);
     }
 
     function getCommentsByDocumentId(documentId: string) {
@@ -74,7 +82,7 @@ export function useComments(elementRef: Ref<HTMLElement | null>) {
 
     function  getMarkersByPage(documentId: string, pageNumber: number) {
         return comments.value.filter(
-            commant => commant.documentId === documentId && commant.marker?.pageNumber === pageNumber
+            comment => comment.documentId === documentId && comment.marker?.pageNumber === pageNumber
         );
     }
 
