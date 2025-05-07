@@ -1,41 +1,49 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue';
+import { ref, computed, onMounted, provide } from 'vue';
 import { useDocuments } from "@/composables/useDocuments.js";
 import { useComments } from "@/composables/useComments.ts";
 import PDFWrapper from "@/components/pdf-viewer/PDFWrapper.vue";
+import CommentTable from "@/components/pdf-viewer/CommentTable.vue";
 
 interface Props {
   documentId: string;
 }
 
 const props = defineProps<Props>();
-
 const baseUrl = window.location.origin;
 
 const documentsApi = useDocuments();
-const markersApi = useComments();
+const commentsApi = useComments();
+
 const loading = ref(true);
+const comments = ref<Comment[]>([]);
 
 // Get document and markers data
 const document = documentsApi.currentDocument;
 
 const allMarkers = computed(() =>
-    markersApi.getCommentsByDocumentId(props.documentId)
+    commentsApi.getCommentsByDocumentId(props.documentId)
 );
 
 // Calculate counts
 const unresolvedCount = computed(() =>
-    markersApi.getUnresolvedComments(props.documentId).length
+    commentsApi.getUnresolvedComments(props.documentId).length
 );
 const resolvedCount = computed(() =>
     allMarkers.value.filter(marker => marker.isResolved).length
 );
 
+provide('comments', comments);
 // Load document and markers on component creation
 onMounted(async () => {
   try {
 
     await documentsApi.getDocumentById(props.documentId);
+    await commentsApi.fetchComments(props.documentId).then((r) => {
+      comments.value = r
+    }).catch((err) => {
+      console.log(err);
+    })
 
   } catch (error) {
     console.error('Error loading document:', error);
@@ -43,28 +51,6 @@ onMounted(async () => {
     loading.value = false;
   }
 });
-
-// Handler for new markers
-const onMarkerAdded = async (commentData) => {
-  try {
-    markersApi.addComment(props.documentId, 1, {x: 10, y: 20}, commentData);
-    // Show success notification using your preferred notification system
-  } catch (error) {
-    console.error('Failed to add comment:', error);
-    // Show error notification
-  }
-};
-
-// Handler for resolving markers
-const onMarkerResolved = async (markerId) => {
-  try {
-    await markersApi.resolveMarker(markerId);
-    // Show success notification
-  } catch (error) {
-    console.error('Failed to resolve comment:', error);
-    // Show error notification
-  }
-};
 </script>
 
 <template>
@@ -91,9 +77,10 @@ const onMarkerResolved = async (markerId) => {
       <PDFWrapper v-if="!loading"
           :pdf-url="`${baseUrl}/pdfs/${document.filename}`"
           :document-id="documentId"
-          @marker-added="onMarkerAdded"
-          @marker-resolved="onMarkerResolved"
       />
+
+      <CommentTable :document-id="documentId" />
+
     </template>
   </div>
 </template>

@@ -1,7 +1,11 @@
 <!-- App.vue -->
 <template>
 
-  <main class="app-container">
+  <div v-if="isLoading" class="loading-container">
+    <div class="loading-spinner"></div>
+  </div>
+
+  <main v-else class="app-container">
 
     <SidebarNavigation
         :routes="routes"
@@ -10,11 +14,11 @@
         :logo="logoUrl"
         @toggle="onSidebarToggle"
     >
-      <template #footer>
+      <template #footer v-if="isAuthenticated">
         <Transition appear>
           <div class="user-info" v-if="sidebarOpen">
             <div class="user-details">
-              <span class="user-name">John Doe</span>
+              <span class="user-name">{{ authStore.email }}</span>
               <small class="user-role">Administrator</small>
             </div>
           </div>
@@ -23,7 +27,7 @@
     </SidebarNavigation>
 
     <main class="main-content" :class="{ 'sidebar-open': sidebarOpen }">
-      <Header />
+      <Header :isAuthenticated="isAuthenticated" />
       <router-view />
       <Footer />
     </main>
@@ -32,62 +36,59 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue';
-import { useToast } from 'primevue/usetoast';
+import { ref, onMounted, watch, nextTick, computed } from 'vue';
 
-// Import PrimeVue components
-import Card from 'primevue/card';
-import Tab from 'primevue/tab';
-import Tabs from 'primevue/tabs';
-import TabList from 'primevue/tablist';
-import TabPanel from 'primevue/tabpanel';
-import TabPanels from 'primevue/tabpanels';
 import Toast from 'primevue/toast';
 import Header from "@/components/base/Header.vue";
 import Footer from "@/components/base/Footer.vue";
 import SidebarNavigation from "@/components/SidebarNavigation.vue";
-import { useAppState } from "@/stores/global.ts";
+import { useMainStore } from "@/stores/mainStore.ts";
 import logoImage from "@/assets/images/logo.svg";
-import Avatar from "primevue/avatar";
+import { useAuth0 } from "@auth0/auth0-vue";
+import { useAuthStore } from "@/stores/authStore.js";
 
 const logoUrl = ref(logoImage);
 
-const toast = useToast();
-const displayUploadDialog = ref(false);
-const activeDocument = ref(null);
-const store = useAppState();
-const theme = store.theme;
+const store = useMainStore();
 const routes = [
   {path: '/', name: "Home", meta: { title: 'Dashboard', icon: 'pi pi-fw pi-home' }},
   {path: '/documents', name: "Documents", meta: { title: 'Documents', icon: 'pi pi-fw pi-file' }},
 ];
 
-const viewDocument = (document) => {
-  activeDocument.value = document;
-};
-
 const onSidebarToggle = (isVisible) => {
     store.setSidebarState(isVisible);
 };
 
-const sidebarOpen = ref(store.sidebarVisible);
+const sidebarOpen = store.sidebarVisible;
 
-watch(() => store.sidebarVisible, (newValue) => {
-  sidebarOpen.value = newValue;
-});
+const { isAuthenticated, isLoading, user: auth0User, getAccessTokenSilently } = useAuth0();
+const authStore = useAuthStore();
 
-const onUpload = () => {
-  displayUploadDialog.value = false;
-  toast.add({ severity: 'success', summary: 'Success', detail: 'Document uploaded successfully', life: 3000 });
-};
+watch(auth0User, async (newUser) => {
+  if (!isAuthenticated.value) {
+    return
+  }
 
-// Initialize theme
+  await getAccessTokenSilently({
+    authorizationParams: {
+      audience: `${import.meta.env.VITE_AUTH0_AUDIENCE}`
+    }
+  }).then((token) => {
+    authStore.saveAndProcessToken(token);
+  })
+
+  authStore.syncUser({...newUser}, isAuthenticated)
+
+  await nextTick()
+})
+
 onMounted(() => {
+
   // Check for saved theme preference or system preference
-  if (!theme && (window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+  if (!store.theme && (window.matchMedia('(prefers-color-scheme: dark)').matches)) {
     store.setTheme('dark');
   } else {
-    store.setTheme(theme)
+    store.setTheme(store.theme)
   }
 });
 </script>

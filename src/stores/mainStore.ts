@@ -1,10 +1,11 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import type { Theme, User } from "@/types";
 import { useUsersApi } from "@/composables/useUsersApi.ts";
+import { type Ref, ref } from "vue";
 
-interface AppState {
+interface RootState {
     theme: Theme,
-    sidebarVisible: boolean,
+    sidebarVisible: Ref<boolean>,
     documentMarker: boolean,
 
     user: User,
@@ -14,15 +15,19 @@ interface AppState {
     toggleDocumentMarker: (state: boolean) => void,
 }
 
-export const useAppState = defineStore('app-state', {
-    state: (): AppState => {
+export const useMainStore = defineStore('main', {
+    state: (): RootState => {
         const userApi = useUsersApi();
 
         return {
             user: userApi.getCurrentUser(),
             theme: 'light',
-            sidebarVisible: true,
+            sidebarVisible: ref(true),
             documentMarker: false,
+
+            setSidebarState(state: boolean) {},
+            setTheme(theme: Theme) {},
+            toggleDocumentMarker(state: boolean) {},
         }
     },
 
@@ -60,11 +65,10 @@ export const useAppState = defineStore('app-state', {
             }
         },
     },
-
     persist: true,
 
 })
 
 if (import.meta.hot) {
-    import.meta.hot.accept(acceptHMRUpdate(useAppState, import.meta.hot))
+    import.meta.hot.accept(acceptHMRUpdate(useMainStore, import.meta.hot))
 }

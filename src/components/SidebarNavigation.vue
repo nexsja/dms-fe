@@ -127,48 +127,42 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import Button from 'primevue/button';
-import Badge from 'primevue/badge';
+import { Button, Badge } from 'primevue';
+import { useAuthStore } from "@/stores/authStore.ts";
 
-// Props
 const props = defineProps({
-  // Array of route objects
   routes: {
     type: Array,
     required: true
   },
-  // Default open state
   defaultOpen: {
     type: Boolean,
     default: true
   },
-  // Sidebar title
   title: {
     type: String,
     default: 'Navigation'
   },
-  // Logo URL
   logo: {
     type: String,
     default: ''
   },
-  // Breakpoint for mobile view (in pixels)
   mobileBreakpoint: {
     type: Number,
     default: 768
   }
 });
 
-// Emits
 const emit = defineEmits(['toggle']);
 
 // State
 const isOpen = ref(props.defaultOpen);
 const isMobile = ref(false);
 const route = useRoute();
+const authStore = useAuthStore();
 
 // Process routes to add expanded property for submenus
 const routes = ref(props.routes.map(route => ({

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { useAppState } from "@/stores/global.ts";
+import { useMainStore } from "@/stores/mainStore.ts";
 import Button from 'primevue/button';
 import { computed, reactive, ref, watch } from "vue";
 
@@ -10,9 +10,9 @@ interface Props {
 
 const props = defineProps<Props>();
 const emit = defineEmits(['update:page', 'toggle-marker']);
-const appState = useAppState();
+const mainStore = useMainStore();
 
-const markerEnabled = ref(appState.documentMarker)
+const markerEnabled = ref(mainStore.documentMarker)
 
 const currentPage = ref(1);
 const previousPage = () => {
@@ -32,13 +32,13 @@ const nextPage = () => {
 const enableMarker = () => {
   const state = !markerEnabled.value;
 
-  appState.toggleDocumentMarker(state);
+  mainStore.toggleDocumentMarker(state);
   // Emit the new value after toggling
   emit('toggle-marker', state);
   markerEnabled.value = state;
 };
 
-appState.$subscribe((mutations, state) => {
+mainStore.$subscribe((mutations, state) => {
   markerEnabled.value = state.documentMarker;
 })
 

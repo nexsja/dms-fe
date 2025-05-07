@@ -4,7 +4,7 @@ import Markers from "@/components/pdf-viewer/Markers.vue";
 import { createLoadingTask } from "vue3-pdfjs";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import Controls from "@/components/pdf-viewer/Controls.vue";
-import { useAppState } from "@/stores/global.ts";
+import { useMainStore } from "@/stores/mainStore.ts";
 
 interface Props {
   pdfUrl: string;
@@ -13,7 +13,7 @@ interface Props {
 
 const props = defineProps<Props>();
 
-const appState = useAppState();
+const appState = useMainStore();
 const currentPage = ref(1);
 const pdfLoaded = ref(false);
 const pageCount = ref(0);
@@ -82,6 +82,10 @@ appState.$subscribe((mutations, state) => {
           @update:page="onPageUpdate"
       />
     </div>
+  </div>
+
+  <div class="flex mt-3 flex-row">
+    <div class="">fdfsdf</div>
   </div>
 </template>
 

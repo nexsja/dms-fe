@@ -17,11 +17,23 @@ import './style.css';
 // Import service components
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
+import { createAuth0 } from "@auth0/auth0-vue";
 
 // Create Vue app
 const app = createApp(App);
 const pinia = createPinia();
 pinia.use(piniaPluginPersistedstate)
+
+app.use(
+    createAuth0({
+        domain: import.meta.env.VITE_AUTH0_DOMAIN,
+        clientId: import.meta.env.VITE_AUTH0_CLIENT_ID,
+        authorizationParams: {
+            redirect_uri: window.location.origin
+        },
+        cacheLocation: "localstorage"
+    })
+);
 
 app.use(pinia);
 app.use(appRouter);

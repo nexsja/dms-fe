@@ -1,18 +1,32 @@
 <script setup lang="ts">
-import Button from 'primevue/button';
-import OverlayBadge from 'primevue/overlaybadge';
-import Avatar from 'primevue/avatar';
-import Menu from 'primevue/menu';
-import { ref } from "vue";
+import { Button, OverlayBadge, Avatar, Menu } from 'primevue';
+import { computed, onMounted, ref } from "vue";
 import logoImage from "@/assets/images/logo.svg";
 import { useToast } from "primevue/usetoast";
-import { useAppState } from "@/stores/global.ts";
+import { useMainStore } from "@/stores/mainStore.ts";
+import { useRouter } from "vue-router";
+import { useAuth0 } from "@auth0/auth0-vue";
+import type { User } from "@/types";
+import { useAuthStore } from "@/stores/authStore.ts";
+import { storeToRefs } from "pinia";
+
+interface HeaderProps {
+  isAuthenticated: boolean;
+}
+
+const props = defineProps<HeaderProps>();
+const router = useRouter();
+const { logout } = useAuth0();
 
 const toast = useToast();
 const logoUrl = ref(logoImage);
 const avatarUrl = "https://www.gravatar.com/avatar/05dfd4b41340d09cae045235eb0893c3?d=mp";
 
-const store = useAppState();
+const store = useMainStore();
+const authStore = useAuthStore();
+const user = computed(() => authStore.user).value;
+
+// const { user, isAuthenticated } = storeToRefs(authStore);
 const theme = store.theme;
 
 // User menu items
@@ -40,14 +54,40 @@ const userMenuItems = ref([
   },
   {
     separator: true
-  },
-  {
-    label: 'Sign Out',
-    icon: 'pi pi-sign-out',
-    command: () => signOut()
   }
 ]);
 
+onMounted(() => {
+
+  if (props.isAuthenticated) {
+      userMenuItems.value.push(
+          {
+            label: 'Sign Out',
+            icon: 'pi pi-sign-out',
+            command: () => {
+              signOut();
+              logout({
+                logoutParams: {
+                  returnTo: window.location.origin
+                }
+              })
+            }
+          }
+      )
+    } else {
+      userMenuItems.value.push(
+          {
+            label: 'Sign in',
+            icon: 'pi pi-sign-in',
+            command: () => {
+
+              //loginWithPopup()
+              router.push('/login')
+            }
+          }
+      )
+    }
+})
 // Menu toggle function
 const toggleUserMenu = (event) => {
   userMenu.value.toggle(event);
@@ -55,6 +95,7 @@ const toggleUserMenu = (event) => {
 
 // Navigation functions
 const navigateTo = (route) => {
+  router.push({ name: 'profile' });
   toast.add({ severity: 'info', summary: 'Navigation', detail: `Navigating to ${route}`, life: 3000 });
   // In a real app, you would use router.push(route)
 };
@@ -91,7 +132,7 @@ const switchTheme = (newTheme: 'light' | 'dark') => {
                   size="large"
                   shape="circle"
                   class="user-avatar"
-                  label="JS"
+                  :label="authStore.initials"
                   style="background-color: var(--primary-color); color: white;" />
         </OverlayBadge>
 

@@ -12,6 +12,16 @@ const routes = [
         }
     },
     {
+        path: '/login',
+        name: 'login',
+        component: () => import("@/views/user/Login.vue"),
+    },
+    {
+        path: '/profile',
+        name: 'profile',
+        component: () => import("@/views/user/Profile.vue"),
+    },
+    {
         path: '/documents',
         meta: {
             title: 'Documents',

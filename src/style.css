@@ -1,4 +1,6 @@
-/* main.css - Global styles for Document Management System */
+@import "tailwindcss";
+@import "./theme.css";
+
 
 /* Base styles */
 :root {

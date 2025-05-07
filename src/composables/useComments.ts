@@ -1,75 +1,58 @@
 import { ref } from 'vue'
-import type { Ref } from 'vue'
 import type { Comment } from "@/types";
-import { useAppState } from "@/stores/global.ts";
-import { useMutation, useQuery, useQueryClient } from "vue-query";
+import { useMutation, useQueryClient } from "vue-query";
 import { CommentMapper } from  "@/mappers";
 import type { CommentRequest } from "@/types/requests";
-import type { ApiResponse } from "@/types/response";
-
-const API_URL = import.meta.env.VITE_DOCUMENT_STORE_URL;
-
+import { useAuth } from "@/composables/useAuth.ts";
+import { CommentService } from "@/services/CommentsService.ts";
 
 
-export function useComments(elementRef: Ref<HTMLElement | null>) {
+export function useComments() {
 
+    const { apiClient } = useAuth();
+    const commentService = new CommentService(apiClient);
     const queryClient = useQueryClient();
 
-    const comments = ref<Comment[]>([])
+    const comments = ref<Comment[]>([]);
 
-    async function fetchComments(documentId: string) {
-        const response = await queryClient.fetchQuery<CommentResponse>({
+    async function fetchComments(documentId: string): Promise<Comment[]> {
+        await queryClient.fetchQuery<Comment[]>({
             queryKey: [`comments-${documentId}`],
-            queryFn: async () => {
-                const response = await fetch(API_URL + `/api/documents/${documentId}/comments`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch: ${response.status}`);
-                }
-                return response.json();
-            }
+            queryFn: async () => await commentService.fetchComments(documentId)
+        }).then((response: Comment[]) => {
+            comments.value = response;
         });
 
-        comments.value = response.data;
-        return response.data;
+        return comments.value
     }
 
-    const activeMarker = ref<number | null>(null)
-
-    const appState = useAppState();
-
     const createCommentMutation = useMutation({
-        mutationFn: async (commentRequest: CommentRequest): Promise<Comment> => {
-            const response = await fetch(`${API_URL}/api/documents/${commentRequest.documentId}/comments`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(commentRequest)
-            });
-
-            if (!response.ok) {
-                throw new Error(`[${response.status}] Error creating comment: ${response.statusText}`);
-            }
-
-            const responseData: ApiResponse<Comment> = await response.json();
-            return CommentMapper.fromResponse(responseData);
-        },
-        onSuccess: (data, variables) => {
-            comments.value.push(data)
+        mutationFn: async (commentRequest: CommentRequest): Promise<Comment> => await commentService.createComment(commentRequest),
+        onSuccess: (comment, variables) => {
+            comments.value.push(comment)
         }
     });
+
+    const resolveCommentMutation = useMutation({
+        mutationFn: async () => {
+
+        }
+    });
+
+    function resolveComment(comment: Comment) {
+
+    }
 
     function addComment(
         documentId: string,
         comment: string,
-        authorId: string,
-        marker: { pageNumber: number, position: { x: number, y: number } } | null
+        marker: { pageNumber: number, position: { x: number, y: number } } | null,
+        parentId?: string | null
     ): string {
 
         const request = CommentMapper.toRequest(
             documentId,
             comment,
-            authorId,
             marker
         );
 
@@ -93,9 +76,8 @@ export function useComments(elementRef: Ref<HTMLElement | null>) {
     }
 
     return {
-        comments,
-        activeMarker,
         addComment,
+        resolveComment,
         fetchComments,
         getCommentsByDocumentId,
         getMarkersByPage,

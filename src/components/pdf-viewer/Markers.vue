@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, onBeforeUnmount, inject, type Ref, watch, useTemplateRef, nextTick } from 'vue';
 import type { Comment, MarkerPosition } from "@/types";
 import { useComments } from "@/composables/useComments.ts";
-import { useAppState } from "@/stores/global.ts";
+import { useMainStore } from "@/stores/mainStore.ts";
 import { FloatLabel, InputText, Button } from "primevue";
 
 interface Props {
@@ -11,14 +11,14 @@ interface Props {
 }
 
 const props = defineProps<Props>()
-
 const pdfComponent = inject<Ref<HTMLElement>>('pdfComponentRef')!!
+const comments = inject<Ref<Comment[]>>('comments')!!.value;
 
-const { comments, activeMarker, addComment, fetchComments } = useComments(pdfComponent);
 
+const { addComment } = useComments(pdfComponent);
 const emit = defineEmits(['marker-resolved', 'marker-created']);
 
-const appState =  useAppState();
+const appState =  useMainStore();
 const selectedMarker = ref<Comment | null>(null);
 const placingMarker = ref(false);
 const newMarkerModal = ref(false);
@@ -32,7 +32,7 @@ const controlsHeight = 58;
 const markerHeight = 30;
 
 const visibleMarkers = computed(() => {
-  return comments.value.filter((comment: Comment) => comment.marker?.pageNumber === props.pageNumber);
+  return comments.filter((comment: Comment) => comment.marker?.pageNumber === props.pageNumber);
 });
 
 const enableMarkerPlacement = () => {
@@ -56,11 +56,9 @@ const saveNewMarker = async () => {
     return;
   }
 
-  let authorId = appState.user.id;
   const newMarker = addComment(
       props.documentId,
       newMarkerComment.value,
-      authorId,
       {
         pageNumber: props.pageNumber,
         position: newMarkerPosition.value
@@ -264,9 +262,7 @@ const onEscapePressed = (event: KeyboardEvent) => {
 };
 
 onMounted(async() => {
-  await fetchComments(props.documentId);
-
-  document.addEventListener('keydown', onEscapePressed)
+    document.addEventListener('keydown', onEscapePressed)
 });
 </script>
 
@@ -290,8 +286,7 @@ onMounted(async() => {
 
   <!-- Marker details modal -->
   <div v-if="selectedMarker" class="marker-modal marker-modal-positioned">
-    <div class="modal-content" :style="modalPosition">
-      <h3>Comment</h3>
+    <div class="modal-content flex-col items-start" :style="modalPosition">
       <p>{{ selectedMarker.comment }}</p>
       <p><small>By: {{ selectedMarker.author.name }} on {{ formatDate(selectedMarker.createdAt) }}</small></p>
       <div class="modal-actions">

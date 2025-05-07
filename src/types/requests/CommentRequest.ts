@@ -9,7 +9,6 @@ export interface MarkerRequest {
 export interface CommentRequest {
     documentId: string;
     comment: string;
-    authorId: string;
     isResolved?: boolean;
     marker?: MarkerRequest | null;
 }
