@@ -1,21 +1,16 @@
 <script setup lang="ts">
 import { ref } from 'vue';
-import { useAuth0 } from '@auth0/auth0-vue';
 import { Button } from 'primevue';
+import { useAuth } from "@/composables/useAuth.ts";
 
-const auth0 = useAuth0();
 const isLoading = ref(false);
+const auth = useAuth();
 
 // Login method
 const login = async () => {
   isLoading.value = true;
   try {
-    await auth0.loginWithRedirect({
-      // authorizationParams: {
-      //   prompt: "none",
-      //   audience: `${import.meta.env.VITE_AUTH0_AUDIENCE}`
-      // }
-    });
+    auth.login();
   } catch (error) {
     console.error('Auth0 login error:', error);
     isLoading.value = false;

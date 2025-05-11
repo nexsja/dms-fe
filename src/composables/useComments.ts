@@ -76,6 +76,7 @@ export function useComments() {
     }
 
     return {
+        comments,
         addComment,
         resolveComment,
         fetchComments,

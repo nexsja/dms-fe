@@ -1,80 +1,73 @@
 <script setup lang="ts">
 import { Button, OverlayBadge, Avatar, Menu } from 'primevue';
-import { computed, onMounted, ref } from "vue";
+import { ref } from "vue";
 import logoImage from "@/assets/images/logo.svg";
 import { useToast } from "primevue/usetoast";
 import { useMainStore } from "@/stores/mainStore.ts";
 import { useRouter } from "vue-router";
-import { useAuth0 } from "@auth0/auth0-vue";
-import { useAuthStore } from "@/stores/authStore.ts";
+import { useAuth } from "@/composables/useAuth.ts";
 
 const router = useRouter();
-const { isAuthenticated, logout } = useAuth0();
 
 const toast = useToast();
 const logoUrl = ref(logoImage);
-const avatarUrl = "https://www.gravatar.com/avatar/05dfd4b41340d09cae045235eb0893c3?d=mp";
-
+// const avatarUrl = "https://www.gravatar.com/avatar/05dfd4b41340d09cae045235eb0893c3?d=mp";
 const store = useMainStore();
-const authStore = useAuthStore();
+
+const auth = useAuth();
+const avatarUrl = auth.getCurrentUser().avatar;
 
 const theme = store.theme;
 
 // User menu items
 const userMenu = ref(null);
-const userMenuItems = ref([
-  {
-    label: 'User Options',
-    items: [
-      {
-        label: 'Profile',
-        icon: 'pi pi-user',
-        command: () => navigateTo('profile')
-      },
-      {
-        label: 'Projects',
-        icon: 'pi pi-folder',
-        command: () => navigateTo('projects')
-      },
-      {
-        label: 'Settings',
-        icon: 'pi pi-cog',
-        command: () => navigateTo('settings')
-      }
-    ]
-  },
-  {
-    separator: true
-  }
-]);
+const userMenuItems = ref({});
 
-if (isAuthenticated.value) {
-  userMenuItems.value.push(
+if (auth.isAuthenticated()) {
+  userMenuItems.value = [
+      {
+        label: 'User Options',
+        items: [
+          {
+            label: 'Profile',
+            icon: 'pi pi-user',
+            command: () => navigateTo('profile')
+          },
+          {
+            label: 'Projects',
+            icon: 'pi pi-folder',
+            command: () => navigateTo('projects')
+          },
+          {
+            label: 'Settings',
+            icon: 'pi pi-cog',
+            command: () => navigateTo('settings')
+          }
+        ]
+      },
+      {
+        separator: true
+      },
       {
         label: 'Sign Out',
         icon: 'pi pi-sign-out',
         command: () => {
           signOut();
-          logout({
-            logoutParams: {
-              returnTo: window.location.origin
-            }
-          })
+          useAuth().logout();
         }
       }
-  )
+    ]
 } else {
-  userMenuItems.value.push(
+  userMenuItems.value = [
       {
         label: 'Sign in',
         icon: 'pi pi-sign-in',
         command: () => {
 
-          //loginWithPopup()
-          router.push('/login')
+          auth.login();
         }
       }
-  )
+  ]
 }
 
 // Menu toggle function
@@ -97,6 +90,8 @@ const signOut = () => {
 const switchTheme = (newTheme: 'light' | 'dark') => {
   store.setTheme(newTheme);
 };
+
+const label = avatarUrl != '' ? undefined : auth.getInitials()
 </script>
 
 <template>
@@ -116,13 +111,14 @@ const switchTheme = (newTheme: 'light' | 'dark') => {
 
       <div class="user-profile">
         <OverlayBadge value="4" severity="danger" class="inline-flex">
-          <Avatar :image="avatarUrl"
-                  @click="toggleUserMenu"
-                  size="large"
-                  shape="circle"
-                  class="user-avatar"
-                  :label="authStore.initials"
-                  style="background-color: var(--primary-color); color: white;" />
+          <Avatar
+              :label="label"
+              :image="avatarUrl"
+              @click="toggleUserMenu"
+              size="large"
+              shape="circle"
+              :class="label ? 'user-avatar bg-(--primary-color) text-white' : 'user-avatar' "
+          />
         </OverlayBadge>
 
         <Menu ref="userMenu"

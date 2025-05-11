@@ -17,51 +17,47 @@ import './style.css';
 // Import service components
 import ToastService from 'primevue/toastservice';
 import ConfirmationService from 'primevue/confirmationservice';
-import { createAuth0 } from "@auth0/auth0-vue";
+import { vueKeycloak } from "@josempgon/vue-keycloak";
 
-const auth0 = createAuth0({
-    domain: import.meta.env.VITE_AUTH0_DOMAIN,
-    clientId: import.meta.env.VITE_AUTH0_CLIENT_ID,
-    authorizationParams: {
-        audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-        redirect_uri: window.location.origin
+const keycloakConfig = {
+    config: {
+        url: 'http://auth.dms.local',
+        realm: 'dms',
+        clientId: 'dms-fe',
     },
-    cacheLocation: "memory"
-});
+    initOptions: {
+        flow: "implicit",
+        onLoad: "check-sso",
+        silentCheckSsoRedirectUri: `${location.origin}/sso/silent-check`
+    }
+}
 
-auth0.checkSession({
-    audience: import.meta.env.VITE_AUTH0_AUDIENCE,
-}).finally(async () => {
-    start()
-})
+const app = createApp(App);
+const pinia = createPinia();
+pinia.use(piniaPluginPersistedstate)
 
-const start = () => {
-    const app = createApp(App);
-    const pinia = createPinia();
-    pinia.use(piniaPluginPersistedstate)
+await vueKeycloak.install(app, keycloakConfig)
 
-    app.use(auth0);
-    app.use(pinia);
-    app.use(createRouter(app));
-    app.use(VueQueryPlugin);
+app.use(pinia);
+app.use(createRouter(app));
+app.use(VueQueryPlugin);
 
-    app.use(PrimeVue, {
-        ripple: true,
-        theme: {
-            preset: Aura,
-            options: {
-                cssLayer: {
-                    name: 'primevue',
-                    order: 'theme, base, primevue'
-                }
+app.use(PrimeVue, {
+    ripple: true,
+    theme: {
+        preset: Aura,
+        options: {
+            cssLayer: {
+                name: 'primevue',
+                order: 'theme, base, primevue'
             }
         }
-    });
+    }
+});
 
-    app.use(VuePdf);
-    app.use(ToastService);
-    app.use(ConfirmationService);
+app.use(VuePdf);
+app.use(ToastService);
+app.use(ConfirmationService);
 
-    app.mount('#app');
-}
+app.mount('#app');
 

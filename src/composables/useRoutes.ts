@@ -1,6 +1,14 @@
 import { createRouter as createVueRouter, createWebHistory, type Router } from 'vue-router';
-import { createAuthGuard } from "@auth0/auth0-vue";
 import type { App } from "vue"
+import { useAuth } from "@/composables/useAuth.ts";
+
+const isAuthenticated = (app: App) => {
+    return (to, from) => {
+        const auth = useAuth()
+
+        return auth.isAuthenticated() ? true : { name:  "login" }
+    }
+}
 
 export function createRouter(app: App): Router {
     const router = createVueRouter({
@@ -17,6 +25,11 @@ export function createRouter(app: App): Router {
                 }
             },
             {
+                path: '/sso/silent-check',
+                name: 'silent-login',
+                component: () => import("@/views/user/SilentCheck.vue"),
+            },
+            {
                 path: '/login',
                 name: 'login',
                 component: () => import("@/views/user/Login.vue"),
@@ -24,7 +37,7 @@ export function createRouter(app: App): Router {
             {
                 path: '/profile',
                 name: 'profile',
-                beforeEnter: createAuthGuard(app),
+                beforeEnter: isAuthenticated(app),
                 component: () => import("@/views/user/Profile.vue"),
             },
             {
@@ -34,7 +47,7 @@ export function createRouter(app: App): Router {
                     description: 'View and manage your uploaded documents.',
                     icon: 'pi pi-folder'
                 },
-                beforeEnter: createAuthGuard(app),
+                beforeEnter: isAuthenticated(app),
                 children: [
                     {
                         path: '',

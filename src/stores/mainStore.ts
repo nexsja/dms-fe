@@ -1,7 +1,7 @@
 import { acceptHMRUpdate, defineStore } from 'pinia';
 import type { Theme, User } from "@/types";
-import { useUsersApi } from "@/composables/useUsersApi.ts";
 import { type Ref, ref } from "vue";
+import { useAuth } from "@/composables/useAuth.ts";
 
 interface RootState {
     theme: Theme,
@@ -17,10 +17,10 @@ interface RootState {
 
 export const useMainStore = defineStore('main', {
     state: (): RootState => {
-        const userApi = useUsersApi();
+        const userAuth = useAuth();
 
         return {
-            user: userApi.getCurrentUser(),
+            user: userAuth.getCurrentUser(),
             theme: 'light',
             sidebarVisible: ref(true),
             documentMarker: false,
