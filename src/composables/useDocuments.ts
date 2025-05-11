@@ -1,6 +1,9 @@
 import { ref, type Ref, watch } from "vue";
 import { useQuery, useQueryClient } from "vue-query";
 import type { Document } from "@/types";
+import { useAuth } from "@/composables/useAuth.ts";
+import { CommentService } from "@/services/CommentsService.ts";
+import { DocumentsService } from "@/services/DocumentsService.ts";
 
 const API_URL = import.meta.env.VITE_DOCUMENT_STORE_URL;
 
@@ -16,16 +19,13 @@ export function useDocuments(elementRef: Ref<HTMLElement | null>) {
 
     const documents = ref<Document[]>([])
 
+    const { apiClient } = useAuth();
+    const documentsService = new DocumentsService(apiClient);
+
     async function fetchDocuments() {
         const { data: allDocuments }  = await useQuery<Document[]>({
             queryKey: [`documents-all`],
-            queryFn: async () => {
-                const response = await fetch(API_URL + `/api/documents`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch: ${response.status}`);
-                }
-                return response.json();
-            }
+            queryFn: async () => await documentsService.fetchDocuments()
         });
 
         watch(allDocuments, (newDocuments) => {
@@ -38,13 +38,7 @@ export function useDocuments(elementRef: Ref<HTMLElement | null>) {
     async function getDocumentById(documentId: string) {
         const response = await queryClient.fetchQuery<Document>({
             queryKey: [`documents-${documentId}`],
-            queryFn: async () => {
-                const response = await fetch(API_URL + `/api/documents/${documentId}`);
-                if (!response.ok) {
-                    throw new Error(`Failed to fetch: ${response.status}`);
-                }
-                return response.json();
-            }
+            queryFn: async () => await documentsService.fetchDocumentById(documentId)
         });
 
         currentDocument.value = response;

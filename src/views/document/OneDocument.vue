@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, onMounted, provide } from 'vue';
+import type { Document } from "@/types"
 import { useDocuments } from "@/composables/useDocuments.js";
 import { useComments } from "@/composables/useComments.ts";
 import PDFWrapper from "@/components/pdf-viewer/PDFWrapper.vue";
@@ -19,7 +20,7 @@ const loading = ref(true);
 const comments = ref<Comment[]>([]);
 
 // Get document and markers data
-const document = documentsApi.currentDocument;
+const document = ref<Document | null>(null);
 
 const allMarkers = computed(() =>
     commentsApi.getCommentsByDocumentId(props.documentId)
@@ -38,9 +39,11 @@ provide('comments', comments);
 onMounted(async () => {
   try {
 
-    await documentsApi.getDocumentById(props.documentId);
+    await documentsApi.getDocumentById(props.documentId).then(doc => {
+      document.value = doc;
+    })
     await commentsApi.fetchComments(props.documentId).then((r) => {
-      comments.value = r
+      // comments.value = r
     }).catch((err) => {
       console.log(err);
     })

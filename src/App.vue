@@ -27,7 +27,7 @@
     </SidebarNavigation>
 
     <main class="main-content" :class="{ 'sidebar-open': sidebarOpen }">
-      <Header :isAuthenticated="isAuthenticated" />
+      <Header />
       <router-view />
       <Footer />
     </main>
@@ -36,7 +36,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch, nextTick, computed } from 'vue';
+import { ref, onMounted, watch, nextTick, getCurrentInstance, inject } from 'vue';
 
 import Toast from 'primevue/toast';
 import Header from "@/components/base/Header.vue";
@@ -61,25 +61,38 @@ const onSidebarToggle = (isVisible) => {
 
 const sidebarOpen = store.sidebarVisible;
 
-const { isAuthenticated, isLoading, user: auth0User, getAccessTokenSilently } = useAuth0();
+const { isAuthenticated, isLoading, user: auth0User, getAccessTokenSilently, loginWithRedirect } = useAuth0();
 const authStore = useAuthStore();
+
 
 watch(auth0User, async (newUser) => {
   if (!isAuthenticated.value) {
     return
   }
 
-  await getAccessTokenSilently({
-    authorizationParams: {
-      audience: `${import.meta.env.VITE_AUTH0_AUDIENCE}`
-    }
-  }).then((token) => {
-    authStore.saveAndProcessToken(token);
-  })
-
+  // try {
+  //   await getAccessTokenSilently({
+  //     authorizationParams: {
+  //       audience: `${import.meta.env.VITE_AUTH0_AUDIENCE}`
+  //     }
+  //   }).then((token) => {
+  //     console.log(token);
+  //     authStore.saveAndProcessToken(token);
+  //   })
+  // } catch (e) {
+  //   console.log(e);
+  //   if (e.error === 'login_required') {
+  //     // await loginWithRedirect();
+  //   }
+  //   if (e.error === 'consent_required') {
+  //     // await loginWithRedirect();
+  //   }
+  //   throw e;
+  // }
+  //
   authStore.syncUser({...newUser}, isAuthenticated)
-
-  await nextTick()
+  //
+  // await nextTick()
 })
 
 onMounted(() => {

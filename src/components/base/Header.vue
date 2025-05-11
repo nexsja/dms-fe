@@ -6,17 +6,10 @@ import { useToast } from "primevue/usetoast";
 import { useMainStore } from "@/stores/mainStore.ts";
 import { useRouter } from "vue-router";
 import { useAuth0 } from "@auth0/auth0-vue";
-import type { User } from "@/types";
 import { useAuthStore } from "@/stores/authStore.ts";
-import { storeToRefs } from "pinia";
 
-interface HeaderProps {
-  isAuthenticated: boolean;
-}
-
-const props = defineProps<HeaderProps>();
 const router = useRouter();
-const { logout } = useAuth0();
+const { isAuthenticated, logout } = useAuth0();
 
 const toast = useToast();
 const logoUrl = ref(logoImage);
@@ -24,9 +17,7 @@ const avatarUrl = "https://www.gravatar.com/avatar/05dfd4b41340d09cae045235eb089
 
 const store = useMainStore();
 const authStore = useAuthStore();
-const user = computed(() => authStore.user).value;
 
-// const { user, isAuthenticated } = storeToRefs(authStore);
 const theme = store.theme;
 
 // User menu items
@@ -57,37 +48,35 @@ const userMenuItems = ref([
   }
 ]);
 
-onMounted(() => {
-
-  if (props.isAuthenticated) {
-      userMenuItems.value.push(
-          {
-            label: 'Sign Out',
-            icon: 'pi pi-sign-out',
-            command: () => {
-              signOut();
-              logout({
-                logoutParams: {
-                  returnTo: window.location.origin
-                }
-              })
+if (isAuthenticated.value) {
+  userMenuItems.value.push(
+      {
+        label: 'Sign Out',
+        icon: 'pi pi-sign-out',
+        command: () => {
+          signOut();
+          logout({
+            logoutParams: {
+              returnTo: window.location.origin
             }
-          }
-      )
-    } else {
-      userMenuItems.value.push(
-          {
-            label: 'Sign in',
-            icon: 'pi pi-sign-in',
-            command: () => {
+          })
+        }
+      }
+  )
+} else {
+  userMenuItems.value.push(
+      {
+        label: 'Sign in',
+        icon: 'pi pi-sign-in',
+        command: () => {
 
-              //loginWithPopup()
-              router.push('/login')
-            }
-          }
-      )
-    }
-})
+          //loginWithPopup()
+          router.push('/login')
+        }
+      }
+  )
+}
+
 // Menu toggle function
 const toggleUserMenu = (event) => {
   userMenu.value.toggle(event);

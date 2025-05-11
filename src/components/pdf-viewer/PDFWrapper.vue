@@ -5,6 +5,7 @@ import { createLoadingTask } from "vue3-pdfjs";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import Controls from "@/components/pdf-viewer/Controls.vue";
 import { useMainStore } from "@/stores/mainStore.ts";
+import CommentTable from "@/components/pdf-viewer/CommentTable.vue";
 
 interface Props {
   pdfUrl: string;
@@ -85,7 +86,7 @@ appState.$subscribe((mutations, state) => {
   </div>
 
   <div class="flex mt-3 flex-row">
-    <div class="">fdfsdf</div>
+
   </div>
 </template>
 
