@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useMainStore } from "@/stores/mainStore.ts";
 import Button from 'primevue/button';
-import { computed, reactive, ref, watch } from "vue";
+import { ref } from "vue";
 
 interface Props {
   currentPage: number;

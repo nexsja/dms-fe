@@ -12,10 +12,8 @@ interface Props {
 
 const props = defineProps<Props>()
 const pdfComponent = inject<Ref<HTMLElement>>('pdfComponentRef')!!
-const comments = inject<Ref<Comment[]>>('comments')!!.value;
 
-
-const { addComment } = useComments(pdfComponent);
+const { comments, addComment } = useComments(pdfComponent);
 const emit = defineEmits(['marker-resolved', 'marker-created']);
 
 const appState =  useMainStore();
@@ -32,7 +30,7 @@ const controlsHeight = 58;
 const markerHeight = 30;
 
 const visibleMarkers = computed(() => {
-  return comments.filter((comment: Comment) => comment.marker?.pageNumber === props.pageNumber);
+  return comments.value.filter((comment: Comment) => comment.marker?.pageNumber === props.pageNumber);
 });
 
 const enableMarkerPlacement = () => {
@@ -246,6 +244,17 @@ onBeforeUnmount(() => {
   document.body.style.cursor = 'default';
 });
 
+const onEnterPressed = (event: KeyboardEvent) => {
+  if (event.key != 'Enter') {
+    return;
+  }
+
+  // Enter is pressed while the new comment modal is open, imitate submit.
+  if (newMarkerModal.value) {
+    saveNewMarker()
+  }
+}
+
 const onEscapePressed = (event: KeyboardEvent) => {
 
   if (event.key != 'Escape') {
@@ -263,6 +272,7 @@ const onEscapePressed = (event: KeyboardEvent) => {
 
 onMounted(async() => {
     document.addEventListener('keydown', onEscapePressed)
+    document.addEventListener('keydown', onEnterPressed)
 });
 </script>
 

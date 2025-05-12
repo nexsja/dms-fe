@@ -5,7 +5,6 @@ import { createLoadingTask } from "vue3-pdfjs";
 import type { PDFDocumentProxy } from "pdfjs-dist";
 import Controls from "@/components/pdf-viewer/Controls.vue";
 import { useMainStore } from "@/stores/mainStore.ts";
-import CommentTable from "@/components/pdf-viewer/CommentTable.vue";
 
 interface Props {
   pdfUrl: string;
@@ -38,7 +37,6 @@ onMounted(() => {
     pageCount.value = pdf.numPages
     pdfLoaded.value = true;
   })
-
 });
 
 appState.$subscribe((mutations, state) => {

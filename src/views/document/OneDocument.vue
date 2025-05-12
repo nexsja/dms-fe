@@ -17,37 +17,49 @@ const documentsApi = useDocuments();
 const commentsApi = useComments();
 
 const loading = ref(true);
-const comments = commentsApi.comments;
 
 // Get document and markers data
 const document = ref<Document | null>(null);
 
-const allMarkers = computed(() =>
-    commentsApi.getCommentsByDocumentId(props.documentId)
-);
+const allMarkers = computed(() => {
+  if (loading.value) {
+    return [];
+  }
+
+  return commentsApi.getCommentsByDocumentId(props.documentId)
+});
 
 // Calculate counts
-const unresolvedCount = computed(() =>
-    commentsApi.getUnresolvedComments(props.documentId).length
-);
-const resolvedCount = computed(() =>
-    allMarkers.value.filter(marker => marker.isResolved).length
-);
+const unresolvedCount = computed(() => {
+  if (loading.value) {
+    return 0;
+  }
+  console.log("are we here");
+  const unresolved =  commentsApi.getUnresolvedComments(props.documentId).length
+  console.log(unresolved);
+  return unresolved
+});
+const resolvedCount = computed(() => {
+  if (loading.value) {
+    return 0;
+  }
 
-provide('comments', comments);
+  return allMarkers.value.filter(marker => marker.isResolved).length
+});
+
 // Load document and markers on component creation
 onMounted(async () => {
   try {
-
     await documentsApi.getDocumentById(props.documentId).then(doc => {
       document.value = doc;
     })
-    await commentsApi.fetchComments(props.documentId);
+    await commentsApi.fetchComments(props.documentId).then(() => {
+      loading.value = false;
+    })
 
   } catch (error) {
     console.error('Error loading document:', error);
   } finally {
-    loading.value = false;
   }
 });
 </script>
@@ -76,9 +88,10 @@ onMounted(async () => {
       <PDFWrapper v-if="!loading"
           :pdf-url="`${baseUrl}/pdfs/${document?.filename}`"
           :document-id="documentId"
+
       />
 
-      <CommentTable :document-id="documentId" />
+      <!--CommentTable :document-id="documentId" /-->
 
     </template>
   </div>

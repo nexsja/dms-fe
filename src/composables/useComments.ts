@@ -1,19 +1,24 @@
 import { ref } from 'vue'
 import type { Comment } from "@/types";
 import { useMutation, useQueryClient } from "vue-query";
-import { CommentMapper } from  "@/mappers";
+import { CommentMapper } from "@/mappers";
 import type { CommentRequest } from "@/types/requests";
 import { useAuth } from "@/composables/useAuth.ts";
 import { CommentService } from "@/services/CommentsService.ts";
 
+type MutationParams = {
+    documentId: string,
+    commentId: string
+}
+
+// Persist comments across components
+const comments = ref<Comment[]>([]);
 
 export function useComments() {
 
     const { apiClient } = useAuth();
     const commentService = new CommentService(apiClient);
     const queryClient = useQueryClient();
-
-    const comments = ref<Comment[]>([]);
 
     async function fetchComments(documentId: string): Promise<Comment[]> {
         await queryClient.fetchQuery<Comment[]>({
@@ -26,6 +31,26 @@ export function useComments() {
         return comments.value
     }
 
+    const resolveCommentMutation = useMutation({
+        mutationFn: async (params: MutationParams): Promise<Comment> =>
+            await commentService.resolveComment(params.documentId, params.commentId),
+        onSuccess: (_, params: MutationParams) => {
+            const { commentId, documentId } = params;
+            const comment = comments.value.find(c => c.id === commentId);
+            if (comment) {
+                comment.isResolved = true;
+            }
+
+            if (documentId) {
+                queryClient.invalidateQueries([`comments-${documentId}`]);
+            }
+        }
+    });
+
+    function resolveComment(comment: Comment) {
+        return resolveCommentMutation.mutateAsync({ commentId: comment.id, documentId: comment.documentId });
+    }
+
     const createCommentMutation = useMutation({
         mutationFn: async (commentRequest: CommentRequest): Promise<Comment> => await commentService.createComment(commentRequest),
         onSuccess: (comment, variables) => {
@@ -33,21 +58,10 @@ export function useComments() {
         }
     });
 
-    const resolveCommentMutation = useMutation({
-        mutationFn: async () => {
-
-        }
-    });
-
-    function resolveComment(comment: Comment) {
-
-    }
-
     function addComment(
         documentId: string,
         comment: string,
         marker: { pageNumber: number, position: { x: number, y: number } } | null,
-        parentId?: string | null
     ): string {
 
         const request = CommentMapper.toRequest(
@@ -71,7 +85,7 @@ export function useComments() {
 
     function getUnresolvedComments(documentId: string) {
         return comments.value.filter(
-            marker => marker.documentId === documentId && !marker.isResolved
+            comment => comment.documentId === documentId && !comment.isResolved
         );
     }
 
